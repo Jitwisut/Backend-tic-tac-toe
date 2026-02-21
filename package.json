@@ -4,6 +4,7 @@
   "description": "RESTful Tic-Tac-Toe Backend with Authentication and Multiplayer",
   "main": "index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "db:generate": "prisma generate",
