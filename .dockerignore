@@ -1,0 +1,12 @@
+node_modules
+.env
+*.log
+npm-debug.log*
+.git
+.gitignore
+prisma/*.db
+prisma/*.db-journal
+tests
+*.test.js
+README.md
+.DS_Store

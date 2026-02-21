@@ -1,0 +1,118 @@
+// Prisma schema for Tic-Tac-Toe game
+// Supports both SQLite (dev) and PostgreSQL (prod)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  roomsAsPlayer1 Room[]     @relation("Player1")
+  roomsAsPlayer2 Room[]     @relation("Player2")
+  roomsAsWinner  Room[]     @relation("Winner")
+  moves          Move[]
+  spectating     Spectator[]
+  botGames       BotGame[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  code        String   @unique // 6-char invite code
+  status      String   @default("waiting") // waiting, in-progress, finished
+  
+  player1Id   String?
+  player1     User?    @relation("Player1", fields: [player1Id], references: [id])
+  
+  player2Id   String?
+  player2     User?    @relation("Player2", fields: [player2Id], references: [id])
+  
+  currentTurn String?  // "player1" or "player2"
+  board       String   @default("---------") // 9 chars representing the board
+  
+  winnerId    String?
+  winner      User?    @relation("Winner", fields: [winnerId], references: [id])
+  
+  isDraw      Boolean  @default(false)
+  version     Int      @default(0) // Optimistic locking for race conditions
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  moves       Move[]
+  spectators  Spectator[]
+}
+
+model Move {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  playerId  String
+  player    User     @relation(fields: [playerId], references: [id])
+  
+  position  Int      // 0-8 (board position)
+  symbol    String   // "X" or "O"
+  moveOrder Int      // Order of the move in the game
+  
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+}
+
+model Spectator {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+}
+
+model BotGame {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  board       String   @default("---------")
+  playerSymbol String  @default("X") // Human plays X, Bot plays O
+  currentTurn String?  @default("player") // "player" or "bot"
+  status      String   @default("in-progress") // in-progress, finished
+  winner      String?  // "player", "bot", or null for draw
+  version     Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  moves       BotMove[]
+}
+
+model BotMove {
+  id        String   @id @default(uuid())
+  gameId    String
+  game      BotGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  player    String   // "player" or "bot"
+  position  Int      // 0-8
+  symbol    String   // "X" or "O"
+  moveOrder Int
+  
+  createdAt DateTime @default(now())
+
+  @@index([gameId])
+}
